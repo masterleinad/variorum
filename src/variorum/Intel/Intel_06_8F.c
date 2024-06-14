@@ -32,7 +32,66 @@ static struct sapphire_rapids_6a_offsets msrs =
     .ia32_perf_global_ctrl        = 0x38F,
     .ia32_mperf                   = 0xE7,
     .ia32_aperf                   = 0xE8,
+
 };
+
+int intel_cpu_fm_06_8f_cap_power_limits(int package_power_limit)
+{
+    unsigned socket;
+    unsigned nsockets, ncores, nthreads;
+#ifdef VARIORUM_WITH_INTEL_CPU
+    variorum_get_topology(&nsockets, &ncores, &nthreads, P_INTEL_CPU_IDX);
+#endif
+
+    char *val = getenv("VARIORUM_LOG");
+    if (val != NULL && atoi(val) == 1)
+    {
+        printf("Running %s\n", __FUNCTION__);
+    }
+
+    for (socket = 0; socket < nsockets; socket++)
+    {
+        cap_package_power_limit(socket, package_power_limit,
+                                msrs.msr_pkg_power_limit,
+                                msrs.msr_rapl_power_unit);
+    }
+    return 0;
+}
+
+int intel_cpu_fm_06_8f_cap_best_effort_node_power_limit(int node_limit)
+{
+    char *val = getenv("VARIORUM_LOG");
+    if (val != NULL && atoi(val) == 1)
+    {
+        printf("Running %s\n", __FUNCTION__);
+    }
+
+    /* We make an assumption here to uniformly distribute the specified
+     * power to both sockets as socket-level power caps. We are not accounting
+     * for memory power or uncore power at the moment. We will develop a model
+     * for this in the future.
+     * When an odd number value is provided, we want this to result in
+     * the floor of the value being taken. So while we will be off by 1W total,
+     * we will guarantee that we stay under the specified cap. */
+
+    unsigned nsockets, ncores, nthreads;
+#ifdef VARIORUM_WITH_INTEL_CPU
+    variorum_get_topology(&nsockets, &ncores, &nthreads, P_INTEL_CPU_IDX);
+#endif
+
+    // Adding this for portability and rounding down.
+    // Ideally line 451 should be okay as it is integer division and we have
+    // two sockets only.
+
+    int remainder = node_limit % nsockets;
+    node_limit = (remainder == 0) ? node_limit : (node_limit - remainder);
+
+    int pkg_limit = node_limit / nsockets;
+
+    intel_cpu_fm_06_8f_cap_power_limits(pkg_limit);
+
+    return 0;
+}
 
 int fm_06_8f_get_power_limits(int long_ver)
 {
@@ -71,6 +130,18 @@ int fm_06_8f_get_power_limits(int long_ver)
         else if (long_ver == 1)
         {
             print_verbose_package_power_info(stdout, msrs.msr_pkg_power_info, socket);
+        }
+    }
+
+    for (socket = 0; socket < nsockets; socket++)
+    {
+        if (long_ver == 0)
+        {
+            print_dram_power_info(stdout, msrs.msr_dram_power_info, socket);
+        }
+        else if (long_ver == 1)
+        {
+            print_verbose_dram_power_info(stdout, msrs.msr_dram_power_info, socket);
         }
     }
 
@@ -180,9 +251,13 @@ int fm_06_8f_monitoring(FILE *output)
     }
 
     get_all_power_data_fixed(output, msrs.msr_pkg_power_limit,
-                             msrs.msr_dram_power_limit, msrs.msr_rapl_power_unit, msrs.msr_pkg_energy_status,
-                             msrs.msr_dram_energy_status, msrs.ia32_fixed_counters,
-                             msrs.ia32_perf_global_ctrl, msrs.ia32_fixed_ctr_ctrl, msrs.ia32_aperf,
+                             msrs.msr_dram_power_limit,
+                             msrs.msr_rapl_power_unit,
+                             msrs.msr_pkg_energy_status,
+                             msrs.msr_dram_energy_status,
+                             msrs.ia32_fixed_counters,
+                             msrs.ia32_perf_global_ctrl,
+                             msrs.ia32_fixed_ctr_ctrl, msrs.ia32_aperf,
                              msrs.ia32_mperf, msrs.ia32_time_stamp_counter);
     return 0;
 }
@@ -221,3 +296,8 @@ int fm_06_8f_get_energy_json(json_t *get_energy_obj)
 
     return 0;
 }
+
+
+
+
+

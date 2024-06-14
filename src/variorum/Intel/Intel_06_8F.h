@@ -77,4 +77,16 @@ int fm_06_8f_get_energy_json(
     json_t *get_energy_obj
 );
 
+int intel_cpu_fm_06_8f_get_power_limits(
+    int long_ver
+);
+
+int intel_cpu_fm_06_8f_cap_power_limits(
+    int package_power_limit
+);
+
+int intel_cpu_fm_06_8f_cap_best_effort_node_power_limit(
+    int node_power_limit
+);
+
 #endif

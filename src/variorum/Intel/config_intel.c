@@ -313,6 +313,10 @@ int set_intel_func_ptrs(int idx)
     else if (*g_platform[idx].arch_id == FM_06_8F)
     {
         g_platform[idx].variorum_print_power_limit = fm_06_8f_get_power_limits;
+        g_platform[idx].variorum_cap_each_socket_power_limit =
+            intel_cpu_fm_06_8f_cap_power_limits;
+        g_platform[idx].variorum_cap_best_effort_node_power_limit =
+            intel_cpu_fm_06_8f_cap_best_effort_node_power_limit;
         g_platform[idx].variorum_print_features = fm_06_8f_get_features;
         g_platform[idx].variorum_print_power = fm_06_8f_get_power;
         g_platform[idx].variorum_print_energy = fm_06_8f_get_energy;
