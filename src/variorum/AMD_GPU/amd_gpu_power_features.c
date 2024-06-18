@@ -17,7 +17,7 @@
 #include <cprintf.h>
 #endif
 
-#include <rocm_version.h>
+#include <rocm-core/rocm_version.h>
 
 void get_power_data(int chipid, int total_sockets, int verbose, FILE *output)
 {
