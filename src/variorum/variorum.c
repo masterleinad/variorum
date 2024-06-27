@@ -1202,41 +1202,38 @@ int variorum_get_utilization_json(char **get_util_obj_str)
     {
         return -1;
     }
-    if (str != NULL)
+    token = strtok(str, d);
+    sum = 0;
+    // get required values to compute cpu utilizations
+    while (token != NULL)
     {
-        token = strtok(str, d);
-        sum = 0;
-        // get required values to compute cpu utilizations
-        while (token != NULL)
+        token = strtok(NULL, d);
+        if (token != NULL)
         {
-            token = strtok(NULL, d);
-            if (token != NULL)
+            sum += strtol(token, &p, 10);
+            if (i == 3)
             {
-                sum += strtol(token, &p, 10);
-                if (i == 3)
-                {
-                    idle = strtol(token, &p, 10);
-                }
-                if (i == 0)
-                {
-                    user_time = strtol(token, &p, 10);
-                }
-                if (i == 1)
-                {
-                    nice_time = strtol(token, &p, 10);
-                }
-                if (i == 2)
-                {
-                    sys_time = strtol(token, &p, 10);
-                }
-                if (i == 4)
-                {
-                    iowait = strtol(token, &p, 10);
-                }
-                sum_idle = idle + iowait;
-                sum_user_time = user_time + nice_time;
-                i++;
+                idle = strtol(token, &p, 10);
             }
+            if (i == 0)
+            {
+                user_time = strtol(token, &p, 10);
+            }
+            if (i == 1)
+            {
+                nice_time = strtol(token, &p, 10);
+            }
+            if (i == 2)
+            {
+                sys_time = strtol(token, &p, 10);
+            }
+            if (i == 4)
+            {
+                iowait = strtol(token, &p, 10);
+            }
+            sum_idle = idle + iowait;
+            sum_user_time = user_time + nice_time;
+            i++;
         }
     }
 

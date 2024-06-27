@@ -132,7 +132,7 @@ if(LIBJUSTIFY_FOUND)
 endif()
 
 if(VARIORUM_WITH_INTEL_GPU)
-target_link_libraries(variorum PUBLIC ${APMIDG_HEADER})
+target_link_libraries(variorum PUBLIC ${APMIDG_LIBRARY})
 endif()
 if(VARIORUM_WITH_NVIDIA_GPU)
 target_link_libraries(variorum PUBLIC ${NVML_HEADER})

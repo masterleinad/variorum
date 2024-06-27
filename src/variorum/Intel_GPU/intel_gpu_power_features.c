@@ -175,13 +175,13 @@ void get_clocks_data(int chipid, int verbose, FILE *output)
         if (verbose)
         {
 #ifdef LIBJUSTIFY_FOUND
-            cfprintf(output, "%s: %s, %s: %d, %s: %d, %s: %d %s\n"
-                     "_INTEL_GPU_CLOCKS Host", m_hostname, "Socket", chipid, "DeviceID", d,
-                     "GPU_Clock", (int)freq_MHz, "MHz");
+            cfprintf(output,
+                     "_INTEL_GPU_CLOCKS Host: %s, Socket: %d, DeviceID: %d, GPU_Clock: %d MHz\n",
+                     m_hostname, chipid, d, (int)freq_MHz);
 #else
-            fprintf(output, "%s: %s, %s: %d, %s: %d, %s: %d %s\n"
-                    "_INTEL_GPU_CLOCKS Host", m_hostname, "Socket", chipid, "DeviceID", d,
-                    "GPU_Clock", (int)freq_MHz, "MHz");
+            fprintf(output,
+                    "_INTEL_GPU_CLOCKS Host: %s, Socket: %d, DeviceID: %d, GPU_Clock: %d MHz\n",
+                    m_hostname, chipid, d, (int)freq_MHz);
 #endif
         }
         else
