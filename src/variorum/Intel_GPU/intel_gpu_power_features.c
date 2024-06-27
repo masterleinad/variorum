@@ -288,3 +288,100 @@ void get_power_limit_data(int chipid, int verbose, FILE *output)
     cflush();
 #endif
 }
+
+void get_energy_data(int chipid, int verbose, FILE *output)
+{
+    uint64_t energy_uj;
+    double value = 0.0;
+    int d;
+    static int init_output = 0;
+
+    //Iterate over all GPU device handles for this socket and print power
+    for (d = chipid * (int)m_gpus_per_socket;
+         d < (chipid + 1) * (int)m_gpus_per_socket; ++d)
+    {
+        int pi = 0; // only report the global power domain
+        apmidg_readenergy(d, pi, &energy_uj, NULL);
+        value = (double)energy_uj * 1.e-6;
+
+        if (verbose)
+        {
+            fprintf(output, "%s: %s, %s: %d, %s: %d, %s: %lf J\n",
+                    "_INTEL_GPU_ENERGY_USAGE Host", m_hostname,
+                    "Socket", chipid,
+                    "DeviceID", d, "Energy", value);
+        }
+        else
+        {
+            if (!init_output)
+            {
+#ifdef LIBJUSTIFY_FOUND
+                cfprintf(output, "%s %s %s %s %s\n",
+                         "_INTEL_GPU_ENERGY_USAGE", "Host",
+                         "Socket", "DeviceID", "Energy");
+#else
+                fprintf(output, "%s %s %s %s %s\n",
+                        "_INTEL_GPU_ENERGY_USAGE", "Host",
+                        "Socket", "DeviceID", "Energy");
+#endif
+                init_output = 1;
+            }
+#ifdef LIBJUSTIFY_FOUND
+            cfprintf(output, "%s %s %d %d %lf\n",
+                     "_INTEL_GPU_ENERGY_USAGE", m_hostname, chipid, d, value);
+#else
+            fprintf(output, "%s %s %d %d %lf\n",
+                    "_INTEL_GPU_ENERGY_USAGE", m_hostname, chipid, d, value);
+
+#endif
+        }
+    }
+}
+
+void get_energy_json(int chipid, json_t *get_energy_obj)
+{
+    uint64_t energy_uj;
+    double value = 0.0;
+    double total_energy_gpu = 0.0;
+    int d;
+    static size_t devIDlen = 24; // Long enough to avoid format truncation.
+    char devID[devIDlen];
+    char socket_id[12];
+    snprintf(socket_id, 12, "socket_%d", chipid);
+
+    json_object_set_new(get_energy_obj, "num_gpus_per_socket",
+                        json_integer(m_gpus_per_socket));
+
+    //try to find socket object in node object, set new object if not found
+    json_t *socket_obj = json_object_get(get_energy_obj, socket_id);
+    if (socket_obj == NULL)
+    {
+        socket_obj = json_object();
+        json_object_set_new(get_energy_obj, socket_id, socket_obj);
+    }
+
+    //create new json object for GPU
+    json_t *gpu_obj = json_object();
+    json_object_set_new(socket_obj, "energy_gpu_joules", gpu_obj);
+
+    for (d = chipid * (int)m_gpus_per_socket;
+         d < (chipid + 1) * (int)m_gpus_per_socket; ++d)
+    {
+        int pi = 0; // only report the global power domain
+        apmidg_readenergy(d, pi, &energy_uj, NULL);
+        value = (double)energy_uj * 1.e-6;
+        snprintf(devID, devIDlen, "GPU_%d", d);
+        json_object_set_new(gpu_obj, devID, json_real(value));
+        total_energy_gpu += value;
+    }
+
+    // If we have an existing CPU object with power_node_watts, update its value.
+    if (json_object_get(get_energy_obj, "energy_node_joules") != NULL)
+    {
+        double energy_node;
+        energy_node = json_real_value(json_object_get(get_energy_obj,
+                                      "energy_node_joules"));
+        json_object_set(get_energy_obj, "energy_node_joules",
+                        json_real(energy_node + total_energy_gpu));
+    }
+}
