@@ -11,8 +11,7 @@
 
 int main(int argc, char **argv)
 {
-    int ret;
-    int tid;
+    int ret = 0;
 
     const char *usage = "Usage: %s [-h] [-v]\n";
     int opt;
@@ -32,9 +31,9 @@ int main(int argc, char **argv)
         }
     }
 
-    #pragma omp parallel private(tid)
+    #pragma omp parallel
     {
-        tid = omp_get_thread_num();
+        int tid = omp_get_thread_num();
 
         // higher-level software must check for thread and process safety
         // we assume thread 0 is responsible for monitor and control
