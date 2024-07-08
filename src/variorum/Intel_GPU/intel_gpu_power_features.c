@@ -20,6 +20,8 @@
 static unsigned m_total_unit_devices;
 static unsigned m_gpus_per_socket;
 static char m_hostname[1024];
+static double *m_initial_energy_for_gpu;
+static int *m_init_energy;
 
 void initAPMIDG(void)
 {
@@ -34,6 +36,16 @@ void initAPMIDG(void)
     variorum_get_topology(&m_num_package, NULL, NULL, P_INTEL_GPU_IDX);
 #endif
     m_gpus_per_socket = m_total_unit_devices / m_num_package;
+
+    static int init = 0;
+    if (!init)
+    {
+        m_initial_energy_for_gpu = (double *) malloc(sizeof(double) *
+                                   m_total_unit_devices);
+        m_init_energy = (int *) calloc(m_num_package, sizeof(int));
+
+        init = 1;
+    }
 
     /* Save hostname */
     gethostname(m_hostname, sizeof(m_hostname));
@@ -302,7 +314,16 @@ void get_energy_data(int chipid, int verbose, FILE *output)
     {
         int pi = 0; // only report the global power domain
         apmidg_readenergy(d, pi, &energy_uj, NULL);
-        value = (double)energy_uj * 1.e-6;
+        if (!m_init_energy[chipid])
+        {
+            m_initial_energy_for_gpu[d] = (double)energy_uj * 1.e-6;
+            value = 0;
+        }
+        else
+        {
+            value = (double)energy_uj * 1.e-6;
+            value -= m_initial_energy_for_gpu[d];
+        }
 
         if (verbose)
         {
@@ -336,6 +357,7 @@ void get_energy_data(int chipid, int verbose, FILE *output)
 #endif
         }
     }
+    m_init_energy[chipid] = 1;
 }
 
 void get_energy_json(int chipid, json_t *get_energy_obj)
@@ -369,11 +391,22 @@ void get_energy_json(int chipid, json_t *get_energy_obj)
     {
         int pi = 0; // only report the global power domain
         apmidg_readenergy(d, pi, &energy_uj, NULL);
-        value = (double)energy_uj * 1.e-6;
+        if (!m_init_energy[chipid])
+        {
+            m_initial_energy_for_gpu[d] = (double)energy_uj * 1.e-6;
+            value = 0;
+        }
+        else
+        {
+            value = (double)energy_uj * 1.e-6;
+            value -= m_initial_energy_for_gpu[d];
+        }
         snprintf(devID, devIDlen, "GPU_%d", d);
         json_object_set_new(gpu_obj, devID, json_real(value));
         total_energy_gpu += value;
     }
+
+    m_init_energy[chipid] = 1;
 
     // If we have an existing CPU object with power_node_watts, update its value.
     if (json_object_get(get_energy_obj, "energy_node_joules") != NULL)
