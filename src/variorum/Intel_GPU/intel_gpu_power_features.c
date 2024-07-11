@@ -23,6 +23,12 @@ static char m_hostname[1024];
 static double *m_initial_energy_for_gpu;
 static int *m_init_energy;
 
+void releaseInitialEnergyForGPU()
+{
+    free(m_initial_energy_for_gpu);
+    free(m_init_energy);
+}
+
 void initAPMIDG(void)
 {
     int verbose = 0;
@@ -43,7 +49,7 @@ void initAPMIDG(void)
         m_initial_energy_for_gpu = (double *) malloc(sizeof(double) *
                                    m_total_unit_devices);
         m_init_energy = (int *) calloc(m_num_package, sizeof(int));
-
+        atexit(releaseInitialEnergyForGPU);
         init = 1;
     }
 
